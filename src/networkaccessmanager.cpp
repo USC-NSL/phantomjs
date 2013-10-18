@@ -4,7 +4,7 @@
   Copyright (C) 2011 Ariya Hidayat <ariya.hidayat@gmail.com>
   Copyright (C) 2011 Ivan De Marino <ivan.de.marino@gmail.com>
 
-  Redistribution and use in source and binary forms, with or without
+  Redistribution and use in source and binary forms, with or withou
   modification, are permitted provided that the following conditions are met:
 
     * Redistributions of source code must retain the above copyright
@@ -42,9 +42,170 @@
 #include "config.h"
 #include "cookiejar.h"
 #include "networkaccessmanager.h"
-
-// 10 MB
+#include <string>
+#include <string>
+#include <sstream>
+#include <map>
+#include <fstream>
 const qint64 MAX_REQUEST_POST_BODY_SIZE = 10 * 1000 * 1000;
+class Convert
+{
+public:
+	template <typename T>
+	static std::string T_to_string(T const &val) 
+	{
+		std::ostringstream ostr;
+		ostr << val;
+
+		return ostr.str();
+	}
+		
+	template <typename T>
+	static T string_to_T(std::string const &val) 
+	{
+		std::istringstream istr(val);
+		T returnVal;
+		if (!(istr >> returnVal))
+                   {
+		exit(1);
+		}
+		return returnVal;
+	}
+
+	static std::string string_to_T(std::string const &val)
+	{
+		return val;
+	}
+};
+
+void exitWithError1(const std::string &error) 
+{
+
+	exit(EXIT_FAILURE);
+}
+
+class ConfigFile
+{
+public:
+	std::map<std::string, std::string> contents;
+	std::string fName;
+
+	void removeComment(std::string &line) const
+	{
+		if (line.find(';') != line.npos)
+			line.erase(line.find(';'));
+	}
+
+	bool onlyWhitespace(const std::string &line) const
+	{
+		return (line.find_first_not_of(' ') == line.npos);
+	}
+	bool validLine(const std::string &line) const
+	{
+		std::string temp = line;
+		temp.erase(0, temp.find_first_not_of("\t "));
+		if (temp[0] == '=')
+			return false;
+
+		for (size_t i = temp.find('=') + 1; i < temp.length(); i++)
+			if (temp[i] != ' ')
+				return true;
+
+		return false;
+	}
+
+	void extractKey(std::string &key, size_t const &sepPos, const std::string &line) const
+	{
+		key = line.substr(0, sepPos);
+		if (key.find('\t') != line.npos || key.find(' ') != line.npos)
+			key.erase(key.find_first_of("\t "));
+	}
+	void extractValue(std::string &value, size_t const &sepPos, const std::string &line) const
+	{
+		value = line.substr(sepPos + 1);
+		value.erase(0, value.find_first_not_of("\t "));
+		value.erase(value.find_last_not_of("\t ") + 1);
+	}
+
+	void extractContents(const std::string &line) 
+	{
+		std::string temp = line;
+		temp.erase(0, temp.find_first_not_of("\t "));
+		size_t sepPos = temp.find('=');
+
+		std::string key, value;
+		extractKey(key, sepPos, temp);
+		extractValue(value, sepPos, temp);
+
+		if (!keyExists(key))
+			contents.insert(std::pair<std::string, std::string>(key, value));
+		else
+			exitWithError1("CFG: Can only have unique key names!\n");
+	}
+
+	void parseLine(const std::string &line, size_t const lineNo)
+	{
+		if (line.find('=') == line.npos)
+		exitWithError1("CFG: Couldn't find separator on line: " + Convert::T_to_string(lineNo) + "\n");
+
+		if (!validLine(line))
+			exitWithError1("CFG: Bad format for line: " + Convert::T_to_string(lineNo) + "\n");
+
+		extractContents(line);
+	}
+
+	void ExtractKeys()
+	{
+		std::ifstream file;
+		file.open(fName.c_str());
+		if (!file)
+			{
+			printf("File NF");
+			exit(1);
+			}
+		std::string line;
+		size_t lineNo = 0;
+		while (std::getline(file, line))
+		{
+			lineNo++;
+			std::string temp = line;
+
+			if (temp.empty())
+				continue;
+
+			removeComment(temp);
+			if (onlyWhitespace(temp))
+				continue;
+
+			parseLine(temp, lineNo);
+		}
+
+		file.close();
+	}
+public:
+	ConfigFile(const std::string &fName)
+	{
+		this->fName = fName;
+		ExtractKeys();
+	}
+
+	bool keyExists(const std::string &key) const
+	{
+		return contents.find(key) != contents.end();
+	}
+
+	template <typename ValueType>
+	ValueType getValueOfKey(const std::string &key, ValueType const &defaultValue = ValueType()) const
+	{
+		if (!keyExists(key))
+			return defaultValue;
+
+		return Convert::string_to_T<ValueType>(contents.find(key)->second);
+	}
+};
+
+
+
 
 static const char *toString(QNetworkAccessManager::Operation op)
 {
@@ -201,6 +362,8 @@ void NetworkAccessManager::setCookieJar(QNetworkCookieJar *cookieJar)
 }
 
 // protected:
+
+extern ConfigFile *cfg;
 QNetworkReply *NetworkAccessManager::createRequest(Operation op, const QNetworkRequest & request, QIODevice * outgoingData)
 {
     QNetworkRequest req(request);
@@ -211,7 +374,27 @@ QNetworkReply *NetworkAccessManager::createRequest(Operation op, const QNetworkR
     } else {
         req.setSslConfiguration(m_sslConfiguration);
     }
-
+QByteArray tempurl = req.url().toEncoded();
+std::string S1=tempurl.data();
+printf("\nUnaltered URL\t --> %s",S1.c_str());
+char *p=strstr((char *)S1.c_str(),".com");
+if(p+4 != NULL)
+{p=p+4;}
+std::string S2(p);
+//std::string S2=S1.substr(21);
+for (std::map<std::string,std::string>::iterator it=cfg->contents.begin(); it!=cfg->contents.end(); ++it)
+{
+if(strstr(tempurl.data(),it->first.c_str()))
+        {
+	std::string S3="http://";
+	std::string S4(it->second.c_str());
+	S3.append(S4);
+	S3.append(S2);
+        QUrl newUrl(S3.c_str());
+        req.setUrl(newUrl);
+	break;
+        }
+}
     // Get the URL string before calling the superclass. Seems to work around
     // segfaults in Qt 4.8: https://gist.github.com/1430393
     QByteArray url = req.url().toEncoded();
@@ -246,6 +429,7 @@ QNetworkReply *NetworkAccessManager::createRequest(Operation op, const QNetworkR
     QVariantMap data;
     data["id"] = m_idCounter;
     data["url"] = url.data();
+printf("\nUrl currelty looking up --> %s \n",url.data());
     data["method"] = toString(op);
     data["headers"] = headers;
     if (op == QNetworkAccessManager::PostOperation) data["postData"] = postData.data();
