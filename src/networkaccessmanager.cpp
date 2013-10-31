@@ -364,6 +364,8 @@ void NetworkAccessManager::setCookieJar(QNetworkCookieJar *cookieJar)
 // protected:
 
 extern ConfigFile *cfg;
+char s3[500];
+char s4[500];
 QNetworkReply *NetworkAccessManager::createRequest(Operation op, const QNetworkRequest & request, QIODevice * outgoingData)
 {
     QNetworkRequest req(request);
@@ -376,24 +378,53 @@ QNetworkReply *NetworkAccessManager::createRequest(Operation op, const QNetworkR
     }
 QByteArray tempurl = req.url().toEncoded();
 std::string S1=tempurl.data();
-printf("\nUnaltered URL\t --> %s",S1.c_str());
-char *p=strstr((char *)S1.c_str(),".com");
+printf("\n Unaltered URL\t --> %s",S1.c_str());
+char *p=NULL;
+if(strstr((char *)S1.c_str(),".com"))
+{
+p=strstr((char *)S1.c_str(),".com");
 if(p+4 != NULL)
 {p=p+4;}
 std::string S2(p);
+// char s3[100];
+//char s4[100];
+
+//printf("\nString S2 == %s",p);
+//char temp1[0]={'\0'};
+//strncpy(temp1,S2.c_str(),10);
+//temp1[10]='\0';
 //std::string S2=S1.substr(21);
 for (std::map<std::string,std::string>::iterator it=cfg->contents.begin(); it!=cfg->contents.end(); ++it)
 {
 if(strstr(tempurl.data(),it->first.c_str()))
         {
+	//char s3[100];
+	//char s4[100];
+	memset(s3,0,500);
+	memset(s4,0,500);
+	strcpy(s3,"http://");
 	std::string S3="http://";
 	std::string S4(it->second.c_str());
+	printf("\nfrom MAp%d" ,strlen(it->second.c_str()));
+	strncpy(s4,it->second.c_str(),(strlen(it->second.c_str())-1));
+	//printf("\nLenght is -->%d",strlen(s3));
+	//strcat(s3,it->second.c_str());
+	strcat(s3,s4);
 	S3.append(S4);
 	S3.append(S2);
-        QUrl newUrl(S3.c_str());
+	//printf("\nS3 ---- > %s",s3);
+	strcat(s3,S2.c_str());
+	int temp=strlen(s3);
+	//printf("\nLenght is -->%d",temp);
+        //memcpy(s4,s3,strlen(s3)); 
+	//s3[temp]='\0';
+printf("\nS3 ----> %s ",s3);
+        QUrl newUrl(s3);
+	//printf("\nS3 ----> %s ",s3);
         req.setUrl(newUrl);
 	break;
         }
+}
 }
     // Get the URL string before calling the superclass. Seems to work around
     // segfaults in Qt 4.8: https://gist.github.com/1430393
@@ -429,12 +460,14 @@ if(strstr(tempurl.data(),it->first.c_str()))
     QVariantMap data;
     data["id"] = m_idCounter;
     data["url"] = url.data();
-printf("\nUrl currelty looking up --> %s \n",url.data());
+printf("\n Url currelty looking up --> %s \n",url.data());
     data["method"] = toString(op);
     data["headers"] = headers;
     if (op == QNetworkAccessManager::PostOperation) data["postData"] = postData.data();
     data["time"] = QDateTime::currentDateTime();
 
+
+//printf("\n Url currelty looking up --> %s \n",url.data());
     JsNetworkRequest jsNetworkRequest(&req, this);
     emit resourceRequested(data, &jsNetworkRequest);
 
