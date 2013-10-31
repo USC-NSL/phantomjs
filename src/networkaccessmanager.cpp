@@ -405,7 +405,7 @@ if(strstr(tempurl.data(),it->first.c_str()))
 	strcpy(s3,"http://");
 	std::string S3="http://";
 	std::string S4(it->second.c_str());
-	printf("\nfrom MAp%d" ,strlen(it->second.c_str()));
+//	printf("\nfrom MAp%d" ,strlen(it->second.c_str()));
 	strncpy(s4,it->second.c_str(),(strlen(it->second.c_str())-1));
 	//printf("\nLenght is -->%d",strlen(s3));
 	//strcat(s3,it->second.c_str());
