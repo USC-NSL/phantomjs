@@ -405,8 +405,24 @@ if(strstr(tempurl.data(),it->first.c_str()))
 	strcpy(s3,"http://");
 	std::string S3="http://";
 	std::string S4(it->second.c_str());
+	int i=0;
+	int count=0;
+	for(i=0;i<it->second.length();i++)
+	{
+        	if(S4[i] == ',')
+        	{
+        	break;
+        	}
+		count++;
+	}
+
+	
+	
+	
+	
+	
 //	printf("\nfrom MAp%d" ,strlen(it->second.c_str()));
-	strncpy(s4,it->second.c_str(),(strlen(it->second.c_str())-1));
+	strncpy(s4,it->second.c_str(),count);
 	//printf("\nLenght is -->%d",strlen(s3));
 	//strcat(s3,it->second.c_str());
 	strcat(s3,s4);
