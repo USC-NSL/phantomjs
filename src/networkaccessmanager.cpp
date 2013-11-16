@@ -366,6 +366,7 @@ void NetworkAccessManager::setCookieJar(QNetworkCookieJar *cookieJar)
 extern ConfigFile *cfg;
 char s3[500];
 char s4[500];
+extern bool instrumented;
 QNetworkReply *NetworkAccessManager::createRequest(Operation op, const QNetworkRequest & request, QIODevice * outgoingData)
 {
     QNetworkRequest req(request);
@@ -379,6 +380,8 @@ QNetworkReply *NetworkAccessManager::createRequest(Operation op, const QNetworkR
 QByteArray tempurl = req.url().toEncoded();
 std::string S1=tempurl.data();
 printf("\n Unaltered URL\t --> %s",S1.c_str());
+if(instrumented)
+{
 char *p=NULL;
 if(strstr((char *)S1.c_str(),".com"))
 {
@@ -405,23 +408,25 @@ if(strstr(tempurl.data(),it->first.c_str()))
 	strcpy(s3,"http://");
 	std::string S3="http://";
 	std::string S4(it->second.c_str());
-	int i=0;
-	int count=0;
-	for(i=0;i<it->second.length();i++)
-	{
-        	if(S4[i] == ',')
-        	{
-        	break;
-        	}
-		count++;
-	}
 
-	
-	
-	
-	
-	
-//	printf("\nfrom MAp%d" ,strlen(it->second.c_str()));
+int i=0;
+int count=0;
+for(i=0;i<it->second.length();i++)
+{
+	if(S4[i] == ',')
+	{
+	break;
+	}
+count++;
+}
+
+
+			
+
+	//printf("\n--->found at %d",count);
+	//printf("\nSize of %d ",sizeof(it->second.c_str()));
+	//printf("\nLenght %d:",it->second.length());
+
 	strncpy(s4,it->second.c_str(),count);
 	//printf("\nLenght is -->%d",strlen(s3));
 	//strcat(s3,it->second.c_str());
@@ -434,12 +439,13 @@ if(strstr(tempurl.data(),it->first.c_str()))
 	//printf("\nLenght is -->%d",temp);
         //memcpy(s4,s3,strlen(s3)); 
 	//s3[temp]='\0';
-printf("\nS3 ----> %s ",s3);
+//	printf("\nS3 ----> %s ",s3);
         QUrl newUrl(s3);
 	//printf("\nS3 ----> %s ",s3);
         req.setUrl(newUrl);
 	break;
         }
+}
 }
 }
     // Get the URL string before calling the superclass. Seems to work around
