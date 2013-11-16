@@ -224,7 +224,7 @@ public:
 
 
 ConfigFile *cfg;
-
+bool instrumented=false;
 int main(int argc, char** argv, const char** envp)
 {
 
@@ -281,7 +281,12 @@ int main(int argc, char** argv, const char** envp)
     // Get the Phantom singleton
     Phantom *phantom = Phantom::instance();
 
-    cfg=new ConfigFile("dns.cfg");
+	if(argc==4)
+	{
+	printf("%s",argv[3]);
+    	cfg=new ConfigFile(argv[3]);
+	instrumented=true;
+	}
 
     // Start script execution
     if (phantom->execute()) {
