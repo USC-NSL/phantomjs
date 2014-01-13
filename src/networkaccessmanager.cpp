@@ -380,6 +380,8 @@ QNetworkReply *NetworkAccessManager::createRequest(Operation op, const QNetworkR
 QByteArray tempurl = req.url().toEncoded();
 std::string S1=tempurl.data();
 printf("\n Unaltered URL\t --> %s",S1.c_str());
+char host[100];
+memset(host,0,100);
 if(instrumented)
 {
 char *p=NULL;
@@ -419,9 +421,18 @@ for(i=0;i<it->second.length();i++)
 	}
 count++;
 }
+int j=0;
+for(i=count+1;i<it->second.length();i++)
+{
+if(S4[i]==',')
+	{
+	break;
+	}
+host[j]=S4[i];
+j++;
+}
 
 
-			
 
 	//printf("\n--->found at %d",count);
 	//printf("\nSize of %d ",sizeof(it->second.c_str()));
@@ -458,10 +469,11 @@ count++;
         if (outgoingData) postData = outgoingData->peek(MAX_REQUEST_POST_BODY_SIZE);
         QString contentType = req.header(QNetworkRequest::ContentTypeHeader).toString();
         if (contentType.isEmpty()) {
+
             req.setHeader(QNetworkRequest::ContentTypeHeader, "application/x-www-form-urlencoded");
         }
     }
-
+//req.setHeader(QNetworkRequest::Host,"ssl.gstatic.com");
     // set custom HTTP headers
     QVariantMap::const_iterator i = m_customHeaders.begin();
     while (i != m_customHeaders.end()) {
@@ -487,8 +499,14 @@ printf("\n Url currelty looking up --> %s \n",url.data());
     data["headers"] = headers;
     if (op == QNetworkAccessManager::PostOperation) data["postData"] = postData.data();
     data["time"] = QDateTime::currentDateTime();
-
-
+	if(instrumented)
+	{
+	if((strlen(host)>1)) 
+		{	
+    		data["Host"] = host;
+		printf("\n\nHost--->%s\n\n",host);
+		}
+	}
 //printf("\n Url currelty looking up --> %s \n",url.data());
     JsNetworkRequest jsNetworkRequest(&req, this);
     emit resourceRequested(data, &jsNetworkRequest);
