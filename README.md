@@ -13,3 +13,6 @@ ssl.gstatic.com = 74.125.224.80,gstatic.com,
 ```
 
 On the right hand side, the ip is the DNS entry for the hostname. The hostname to right sets the HTTP "Host:" header.
+
+Chages:
+- networkaccessmanager.cpp
