@@ -787,7 +787,7 @@ void Config::handleOption(const QString &option, const QVariant &value)
     }
    if(option == "dns"){
 	std::string utf8_text = value.toString().toUtf8().constData();
-	std::cout<<"\n\n\nDNSSSSSSSSSSS\n\n\n"<<utf8_text;
+	//std::cout<<"\n\n\nDNSSSSSSSSSSS\n\n\n"<<utf8_text; //causing build problems in OSX 10.8.5
 	cfg=new ConfigFile(utf8_text.c_str());
         instrumented=true;
 

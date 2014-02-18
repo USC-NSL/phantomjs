@@ -377,88 +377,87 @@ QNetworkReply *NetworkAccessManager::createRequest(Operation op, const QNetworkR
     } else {
         req.setSslConfiguration(m_sslConfiguration);
     }
-QByteArray tempurl = req.url().toEncoded();
-std::string S1=tempurl.data();
-printf("\n Unaltered URL\t --> %s",S1.c_str());
-char host[100];
-memset(host,0,100);
-if(instrumented)
-{
-char *p=NULL;
-if(strstr((char *)S1.c_str(),".com"))
-{
-p=strstr((char *)S1.c_str(),".com");
-if(p+4 != NULL)
-{p=p+4;}
-std::string S2(p);
-// char s3[100];
-//char s4[100];
 
-//printf("\nString S2 == %s",p);
-//char temp1[0]={'\0'};
-//strncpy(temp1,S2.c_str(),10);
-//temp1[10]='\0';
-//std::string S2=S1.substr(21);
-for (std::map<std::string,std::string>::iterator it=cfg->contents.begin(); it!=cfg->contents.end(); ++it)
-{
-if(strstr(tempurl.data(),it->first.c_str()))
-        {
-	//char s3[100];
-	//char s4[100];
-	memset(s3,0,500);
-	memset(s4,0,500);
-	strcpy(s3,"http://");
-	std::string S3="http://";
-	std::string S4(it->second.c_str());
+    QByteArray tempurl = req.url().toEncoded();
+    std::string S1 = tempurl.data();
+    qDebug() << "DNS Unaltered URL --> " << S1.c_str();
+    char host[100];
+    memset(host, 0, 100);
 
-int i=0;
-int count=0;
-for(i=0;i<it->second.length();i++)
-{
-	if(S4[i] == ',')
-	{
-	break;
-	}
-count++;
-}
-int j=0;
-for(i=count+1;i<it->second.length();i++)
-{
-if(S4[i]==',')
-	{
-	break;
-	}
-host[j]=S4[i];
-j++;
-}
+    if(instrumented) {
+        char *p=NULL;
 
+        if(strstr((char *)S1.c_str(), ".com")) {  //substring search of ".com" in URL
+            p = strstr((char *)S1.c_str(), ".com");
 
+            if(p+4 != NULL){
+                p=p+4;
+            }
 
-	//printf("\n--->found at %d",count);
-	//printf("\nSize of %d ",sizeof(it->second.c_str()));
-	//printf("\nLenght %d:",it->second.length());
+            std::string S2(p);
+            // char s3[100];
+            //char s4[100];
 
-	strncpy(s4,it->second.c_str(),count);
-	//printf("\nLenght is -->%d",strlen(s3));
-	//strcat(s3,it->second.c_str());
-	strcat(s3,s4);
-	S3.append(S4);
-	S3.append(S2);
-	//printf("\nS3 ---- > %s",s3);
-	strcat(s3,S2.c_str());
-	int temp=strlen(s3);
-	//printf("\nLenght is -->%d",temp);
-        //memcpy(s4,s3,strlen(s3)); 
-	//s3[temp]='\0';
-//	printf("\nS3 ----> %s ",s3);
-        QUrl newUrl(s3);
-	//printf("\nS3 ----> %s ",s3);
-        req.setUrl(newUrl);
-	break;
-        }
-}
-}
-}
+            //printf("\nString S2 == %s",p);
+            //char temp1[0]={'\0'};
+            //strncpy(temp1,S2.c_str(),10);
+            //temp1[10]='\0';
+            //std::string S2=S1.substr(21);
+
+            for (std::map<std::string,std::string>::iterator it=cfg->contents.begin(); it!=cfg->contents.end(); ++it){
+                if(strstr(tempurl.data(), it->first.c_str())){
+	                //char s3[100];
+	                //char s4[100];
+	                memset(s3,0,500);
+	                memset(s4,0,500);
+	                strcpy(s3,"http://");
+	                std::string S3="http://";
+	                std::string S4(it->second.c_str());
+
+                    int i=0;
+                    int count=0;
+                    for(i=0;i<it->second.length();i++){
+	                    if(S4[i] == ','){
+	                        break;
+	                    }
+                        count++;
+                    }
+
+                    int j=0;
+                    for(i=count+1;i<it->second.length();i++){
+                        if(S4[i]==','){
+	                        break;
+	                    }
+                        host[j]=S4[i];
+                        j++;
+                    }
+
+	                //printf("\n--->found at %d",count);
+	                //printf("\nSize of %d ",sizeof(it->second.c_str()));
+	                //printf("\nLenght %d:",it->second.length());
+
+	                strncpy(s4,it->second.c_str(),count);
+	                //printf("\nLenght is -->%d",strlen(s3));
+	                //strcat(s3,it->second.c_str());
+    	            strcat(s3,s4);
+	                S3.append(S4);
+	                S3.append(S2);
+	                //printf("\nS3 ---- > %s",s3);
+	                strcat(s3,S2.c_str());
+	                int temp=strlen(s3);
+	                //printf("\nLenght is -->%d",temp);
+                    //memcpy(s4,s3,strlen(s3)); 
+	                //s3[temp]='\0';
+                    //	printf("\nS3 ----> %s ",s3);
+                    QUrl newUrl(s3);
+	                //printf("\nS3 ----> %s ",s3);
+                    req.setUrl(newUrl);
+	                break;
+                } //close if
+            } //close for
+        } //close if
+    } //close if(instrumented)
+
     // Get the URL string before calling the superclass. Seems to work around
     // segfaults in Qt 4.8: https://gist.github.com/1430393
     QByteArray url = req.url().toEncoded();
@@ -473,7 +472,8 @@ j++;
             req.setHeader(QNetworkRequest::ContentTypeHeader, "application/x-www-form-urlencoded");
         }
     }
-//req.setHeader(QNetworkRequest::Host,"ssl.gstatic.com");
+    
+    //req.setHeader(QNetworkRequest::Host,"ssl.gstatic.com");
     // set custom HTTP headers
     QVariantMap::const_iterator i = m_customHeaders.begin();
     while (i != m_customHeaders.end()) {
@@ -494,20 +494,20 @@ j++;
     QVariantMap data;
     data["id"] = m_idCounter;
     data["url"] = url.data();
-printf("\n Url currelty looking up --> %s \n",url.data());
+    qDebug() << "DNS URL currently looking up --> " << url.data();
     data["method"] = toString(op);
     data["headers"] = headers;
+    
     if (op == QNetworkAccessManager::PostOperation) data["postData"] = postData.data();
     data["time"] = QDateTime::currentDateTime();
-	if(instrumented)
-	{
-	if((strlen(host)>1)) 
-		{	
+	
+    if(instrumented){
+	    if((strlen(host)>1)) {	
     		data["Host"] = host;
-		printf("\n\nHost--->%s\n\n",host);
+		    qDebug() << "DNS Host--->" << host;
 		}
 	}
-//printf("\n Url currelty looking up --> %s \n",url.data());
+    //printf("\n Url currelty looking up --> %s \n",url.data());
     JsNetworkRequest jsNetworkRequest(&req, this);
     emit resourceRequested(data, &jsNetworkRequest);
 
