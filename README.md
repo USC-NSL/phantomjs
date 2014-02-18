@@ -14,5 +14,9 @@ ssl.gstatic.com = 74.125.224.80,gstatic.com,
 
 On the right hand side, the ip is the DNS entry for the hostname. The hostname to right sets the HTTP "Host:" header.
 
-Chages:
+Build:
+- First time compiling run build.sh which will compile QT and PhantomJS. This takes a while.
+- Subsequent changes to PhantomJS can be compiled in with make.
+
+Changes:
 - networkaccessmanager.cpp
