@@ -378,85 +378,49 @@ QNetworkReply *NetworkAccessManager::createRequest(Operation op, const QNetworkR
         req.setSslConfiguration(m_sslConfiguration);
     }
 
-    QByteArray tempurl = req.url().toEncoded();
-    std::string S1 = tempurl.data();
-    qDebug() << "DNS Unaltered URL --> " << S1.c_str();
-    char host[100];
-    memset(host, 0, 100);
+    QUrl reqUrl = req.url();   
+    std::string protocol = reqUrl.scheme().toUtf8().data();    //get scheme
+    std::string reqHost = reqUrl.host().toUtf8().data();       //get host
+    std::string path = reqUrl.path().toUtf8().data();          //get path
 
-    if(instrumented) {
-        char *p=NULL;
-
-        if(strstr((char *)S1.c_str(), ".com")) {  //substring search of ".com" in URL
-            p = strstr((char *)S1.c_str(), ".com");
-
-            if(p+4 != NULL){
-                p=p+4;
+    qDebug() << "DNS - incoming URL " << reqUrl.toEncoded().data();
+    qDebug() << "DNS - protocol: " << protocol.c_str() << " host: " << reqHost.c_str() << " path: " << path.c_str();
+    
+    char* hostHeader = NULL; //if this gets set as not NULL then we set the Host request header
+    if(instrumented && protocol != "data") {        //instrumented is set if a --dns flag was passed to PhantomJS
+        
+        //loop through all the entries to look for a hostname match
+        for (std::map<std::string, std::string>::iterator it=cfg->contents.begin(); it!=cfg->contents.end(); ++it){
+            const char* hostname = it->first.c_str();
+            const char* value = it->second.c_str();  //need to split
+           
+            char* valueBuf = strdup(value);
+            char* ip = strtok(valueBuf, ",");
+           
+            if(ip == NULL) {
+                qWarning() << "DNS - failed to parse DNS entry hostname: " << hostname << " value: " << value;
+                continue; //if ip parsing failed then skip
             }
+            char* header = strtok(NULL, ","); //parse the header part of value
+            
+            //if we have a hostname match
+            if(strcmp(reqHost.c_str(), hostname) == 0) {                
+                QString newHost(ip);
+                reqUrl.setHost(newHost);
+                
+                qDebug() << "DNS - rewritten URL: " << reqUrl.toEncoded().data();
+                req.setUrl(reqUrl);
 
-            std::string S2(p);
-            // char s3[100];
-            //char s4[100];
+                if(header != NULL){
+                    //set Host header for this request if we parsed one
+                    hostHeader = strdup(header);
+                }
 
-            //printf("\nString S2 == %s",p);
-            //char temp1[0]={'\0'};
-            //strncpy(temp1,S2.c_str(),10);
-            //temp1[10]='\0';
-            //std::string S2=S1.substr(21);
-
-            for (std::map<std::string,std::string>::iterator it=cfg->contents.begin(); it!=cfg->contents.end(); ++it){
-                if(strstr(tempurl.data(), it->first.c_str())){
-	                //char s3[100];
-	                //char s4[100];
-	                memset(s3,0,500);
-	                memset(s4,0,500);
-	                strcpy(s3,"http://");
-	                std::string S3="http://";
-	                std::string S4(it->second.c_str());
-
-                    int i=0;
-                    int count=0;
-                    for(i=0;i<it->second.length();i++){
-	                    if(S4[i] == ','){
-	                        break;
-	                    }
-                        count++;
-                    }
-
-                    int j=0;
-                    for(i=count+1;i<it->second.length();i++){
-                        if(S4[i]==','){
-	                        break;
-	                    }
-                        host[j]=S4[i];
-                        j++;
-                    }
-
-	                //printf("\n--->found at %d",count);
-	                //printf("\nSize of %d ",sizeof(it->second.c_str()));
-	                //printf("\nLenght %d:",it->second.length());
-
-	                strncpy(s4,it->second.c_str(),count);
-	                //printf("\nLenght is -->%d",strlen(s3));
-	                //strcat(s3,it->second.c_str());
-    	            strcat(s3,s4);
-	                S3.append(S4);
-	                S3.append(S2);
-	                //printf("\nS3 ---- > %s",s3);
-	                strcat(s3,S2.c_str());
-	                int temp=strlen(s3);
-	                //printf("\nLenght is -->%d",temp);
-                    //memcpy(s4,s3,strlen(s3)); 
-	                //s3[temp]='\0';
-                    //	printf("\nS3 ----> %s ",s3);
-                    QUrl newUrl(s3);
-	                //printf("\nS3 ----> %s ",s3);
-                    req.setUrl(newUrl);
-	                break;
-                } //close if
-            } //close for
-        } //close if
-    } //close if(instrumented)
+                free(valueBuf);
+                break;
+            }
+        }
+    }
 
     // Get the URL string before calling the superclass. Seems to work around
     // segfaults in Qt 4.8: https://gist.github.com/1430393
@@ -494,19 +458,18 @@ QNetworkReply *NetworkAccessManager::createRequest(Operation op, const QNetworkR
     QVariantMap data;
     data["id"] = m_idCounter;
     data["url"] = url.data();
-    qDebug() << "DNS URL currently looking up --> " << url.data();
+    //qDebug() << "DNS URL currently looking up --> " << url.data();
     data["method"] = toString(op);
     data["headers"] = headers;
     
     if (op == QNetworkAccessManager::PostOperation) data["postData"] = postData.data();
     data["time"] = QDateTime::currentDateTime();
 	
-    if(instrumented){
-	    if((strlen(host)>1)) {	
-    		data["Host"] = host;
-		    qDebug() << "DNS Host--->" << host;
-		}
+    if(instrumented && hostHeader != NULL) {	
+        data["Host"] = hostHeader;
+		qDebug() << "DNS - setting HTTP 'Host' to" << hostHeader << " for " << url.data();
 	}
+
     //printf("\n Url currelty looking up --> %s \n",url.data());
     JsNetworkRequest jsNetworkRequest(&req, this);
     emit resourceRequested(data, &jsNetworkRequest);
