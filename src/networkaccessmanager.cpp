@@ -364,8 +364,6 @@ void NetworkAccessManager::setCookieJar(QNetworkCookieJar *cookieJar)
 // protected:
 
 extern ConfigFile *cfg;
-char s3[500];
-char s4[500];
 extern bool instrumented;
 QNetworkReply *NetworkAccessManager::createRequest(Operation op, const QNetworkRequest & request, QIODevice * outgoingData)
 {
@@ -382,6 +380,7 @@ QNetworkReply *NetworkAccessManager::createRequest(Operation op, const QNetworkR
     std::string protocol = reqUrl.scheme().toUtf8().data();    //get scheme
     std::string reqHost = reqUrl.host().toUtf8().data();       //get host
     std::string path = reqUrl.path().toUtf8().data();          //get path
+    //const char* hostname = reqHost.c_str();
 
     qDebug() << "DNS - incoming URL " << reqUrl.toEncoded().data();
     qDebug() << "DNS - protocol: " << protocol.c_str() << " host: " << reqHost.c_str() << " path: " << path.c_str();
@@ -390,21 +389,20 @@ QNetworkReply *NetworkAccessManager::createRequest(Operation op, const QNetworkR
     if(instrumented && protocol != "data") {        //instrumented is set if a --dns flag was passed to PhantomJS
         
         //loop through all the entries to look for a hostname match
-        for (std::map<std::string, std::string>::iterator it=cfg->contents.begin(); it!=cfg->contents.end(); ++it){
-            const char* hostname = it->first.c_str();
-            const char* value = it->second.c_str();  //need to split
-           
+        //for (std::map<std::string, std::string>::iterator it=cfg->contents.begin(); it!=cfg->contents.end(); ++it){
+        std::map<std::string, std::string>::iterator iter = cfg->contents.find(reqHost);
+        if(iter != cfg->contents.end()){ //if hostname key exists
+            const char* hostname = iter->first.c_str();
+            const char* value = iter->second.c_str();  //need to split
+            qDebug() << "DNS - got hostname entry for " << hostname << ":" << value;
             char* valueBuf = strdup(value);
             char* ip = strtok(valueBuf, ",");
            
             if(ip == NULL) {
                 qWarning() << "DNS - failed to parse DNS entry hostname: " << hostname << " value: " << value;
-                continue; //if ip parsing failed then skip
-            }
-            char* header = strtok(NULL, ","); //parse the header part of value
+            } else {
+                char* header = strtok(NULL, ","); //parse the header part of value
             
-            //if we have a hostname match
-            if(strcmp(reqHost.c_str(), hostname) == 0) {                
                 QString newHost(ip);
                 reqUrl.setHost(newHost);
                 
@@ -415,9 +413,7 @@ QNetworkReply *NetworkAccessManager::createRequest(Operation op, const QNetworkR
                     //set Host header for this request if we parsed one
                     hostHeader = strdup(header);
                 }
-
                 free(valueBuf);
-                break;
             }
         }
     }
